@@ -1,18 +1,33 @@
 import React, { useState, useEffect } from 'react';
 import { TextField, Button, Card, CardContent, Typography, Grid, CardMedia } from '@mui/material';
-import { useAuth } from '../context/AuthContext'; // Keep only the necessary imports
+import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
 
-const PEXELS_API_KEY = 'DobWylb0GnYydvusyd3xWQcVyKETPdg5FBRUYAmyWjekjDbbivKjVlxC'; // Add your API key here
+const PEXELS_API_KEY = 'DobWylb0GnYydvusyd3xWQcVyKETPdg5FBRUYAmyWjekjDbbivKjVlxC';
 
 const Post = () => {
-  const { user } = useAuth(); // Removed logout, since it's not used
+  const { user } = useAuth();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [image, setImage] = useState('');
   const [posts, setPosts] = useState([]);
 
-  // Fetch a random image from Pexels API
+  // Load posts from localStorage for the specific user
+  useEffect(() => {
+    if (user) {
+      const storedPosts = JSON.parse(localStorage.getItem(`posts_${user.username}`)) || [];
+      setPosts(storedPosts);
+      fetchImage();
+    }
+  }, [user]);
+
+  // Save posts to localStorage when posts change
+  useEffect(() => {
+    if (user) {
+      localStorage.setItem(`posts_${user.username}`, JSON.stringify(posts));
+    }
+  }, [posts, user]);
+
   const fetchImage = async () => {
     try {
       const response = await axios.get('https://api.pexels.com/v1/search', {
@@ -22,7 +37,7 @@ const Post = () => {
         params: {
           query: 'blog',
           per_page: 1,
-          page: Math.floor(Math.random() * 100) + 1, // Randomize results
+          page: Math.floor(Math.random() * 100) + 1,
         },
       });
 
@@ -33,13 +48,9 @@ const Post = () => {
       }
     } catch (error) {
       console.error('Error fetching image:', error);
-      setImage('https://via.placeholder.com/400x300?text=No+Image'); // Fallback image
+      setImage('https://via.placeholder.com/400x300?text=No+Image');
     }
   };
-
-  useEffect(() => {
-    fetchImage();
-  }, []);
 
   // Handle post creation
   const handlePostCreation = () => {
@@ -54,12 +65,27 @@ const Post = () => {
       date: new Date().toLocaleDateString(),
       image,
       imageLabel: 'Post Image',
+      author: user.username,
+      replies: [],
     };
 
     setPosts([newPost, ...posts]);
     setTitle('');
     setDescription('');
     fetchImage(); // Fetch a new image for the next post
+  };
+
+  // Handle post reply
+  const handleReply = (index, reply) => {
+    const updatedPosts = [...posts];
+    updatedPosts[index].replies.push(reply);
+    setPosts(updatedPosts);
+  };
+
+  // Handle delete post (for moderators)
+  const handleDeletePost = (index) => {
+    const updatedPosts = posts.filter((_, i) => i !== index);
+    setPosts(updatedPosts);
   };
 
   if (!user) {
@@ -135,14 +161,42 @@ const Post = () => {
                   {post.title}
                 </Typography>
                 <Typography variant="subtitle1" color="text.secondary">
-                  {post.date}
+                  {post.date} — by {post.author}
                 </Typography>
                 <Typography variant="body1" paragraph>
                   {post.description}
                 </Typography>
-                <Typography variant="subtitle1" color="primary">
-                  Continue reading...
-                </Typography>
+
+                {/* Replies */}
+                {post.replies.map((reply, idx) => (
+                  <Typography key={idx} variant="body2" sx={{ ml: 2 }}>
+                    ➡️ {reply}
+                  </Typography>
+                ))}
+
+                {/* Reply Input */}
+                <TextField
+                  label="Reply"
+                  fullWidth
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && e.target.value.trim()) {
+                      handleReply(index, e.target.value);
+                      e.target.value = '';
+                    }
+                  }}
+                  sx={{ mt: 1 }}
+                />
+
+                {/* Delete Button - Only for Moderators */}
+                {user?.role === 'Moderator' && (
+                  <Button
+                    color="error"
+                    onClick={() => handleDeletePost(index)}
+                    sx={{ mt: 1 }}
+                  >
+                    Delete Post
+                  </Button>
+                )}
               </CardContent>
             </Card>
           </Grid>
