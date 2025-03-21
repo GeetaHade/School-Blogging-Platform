@@ -53,6 +53,16 @@ function Header(props) {
             >
               Logout
             </Button>
+
+            {/* Create Post Button (Visible after login) */}
+            <Button
+              onClick={() => navigate('/create-post')}
+              variant="contained"
+              color="primary"
+              sx={{ textTransform: 'none' }}
+            >
+              Create Post
+            </Button>
           </Stack>
         ) : (
           <Button

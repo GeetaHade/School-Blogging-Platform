@@ -3,6 +3,9 @@ import { AuthProvider } from './context/AuthContext';
 import Blog from './components/Blog';
 import Login from './components/Login';
 import Signup from './components/Signup';
+import CreatePost from './components/CreatePost';
+import Posts from './components/Post';
+import React from 'react';
 
 import './App.css';
 
@@ -27,7 +30,13 @@ function App() {
           <Route path="/travel" element={<div>Travel Page</div>} />
           <Route path="/alumni" element={<div>Alumni Page</div>} />
 
-          {/* Login Page */}
+          {/* Create Post Page */}
+          <Route path="/create-post" element={<CreatePost />} />
+
+          {/* Posts List Page */}
+          <Route path="/posts" element={<Posts />} />
+
+          {/* Login and Signup Pages */}
           <Route path="/signup" element={<Signup />} />
           <Route path="/login" element={<Login />} />
         </Routes>
