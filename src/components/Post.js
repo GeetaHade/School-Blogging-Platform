@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { Card, CardContent, Typography, CardMedia, Grid, Container, TextField, Button } from '@mui/material';
+import { useAuth } from '../context/AuthContext'; // Import the useAuth hook
 
 function Posts() {
+    const { user } = useAuth(); // Get the logged-in user from context
     const [posts, setPosts] = useState([]);
     const [replyInputs, setReplyInputs] = useState({});
 
@@ -36,8 +38,23 @@ function Posts() {
         const content = replyInputs[postId];
         if (!content.trim()) return;
 
+        if (!user) {
+            alert('You must be logged in to reply.');
+            return;
+        }
+
         try {
-            const response = await axios.post(`http://localhost:5001/posts/${postId}/reply`, { user: 'Anonymous', content });
+            const token = localStorage.getItem('authToken'); // Get the token from localStorage
+
+            const response = await axios.post(
+                `http://localhost:5001/posts/${postId}/reply`,
+                { content },
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`, // Pass the token for authentication
+                    },
+                }
+            );
             console.log('Reply added:', response.data);
 
             // Update the posts array with the new reply by modifying the specific post
@@ -48,7 +65,7 @@ function Posts() {
                               ...post,
                               replies: [
                                   ...post.replies,
-                                  { user: 'Anonymous', content, created_at: new Date().toISOString() },
+                                  { user: user.username, content, created_at: new Date().toISOString() },
                               ],
                           }
                         : post
@@ -80,25 +97,29 @@ function Posts() {
                                             <Typography variant="subtitle1" sx={{ mt: 2 }}>Replies:</Typography>
                                             {post.replies.map((reply, index) => (
                                                 <Typography key={`${post.id}-reply-${index}`} variant="body2" color="textSecondary" sx={{ ml: 2 }}>
-                                                    <strong>{reply.user}:</strong> {reply.content}
+                                                    <strong>{reply.user || 'Anonymous'}:</strong> {reply.content}
                                                 </Typography>
                                             ))}
                                         </div>
                                     )}
 
-                                    {/* Reply Input */}
-                                    <TextField
-                                        label="Write a reply..."
-                                        variant="outlined"
-                                        size="small"
-                                        fullWidth
-                                        sx={{ mt: 2 }}
-                                        value={replyInputs[post.id] || ''}
-                                        onChange={(e) => handleReplyChange(post.id, e)}
-                                    />
-                                    <Button variant="contained" sx={{ mt: 1 }} onClick={() => handleReplySubmit(post.id)}>
-                                        Reply
-                                    </Button>
+                                    {/* Render reply input only if the user is logged in */}
+                                    {user && (
+                                        <>
+                                            <TextField
+                                                label="Write a reply..."
+                                                variant="outlined"
+                                                size="small"
+                                                fullWidth
+                                                sx={{ mt: 2 }}
+                                                value={replyInputs[post.id] || ''}
+                                                onChange={(e) => handleReplyChange(post.id, e)}
+                                            />
+                                            <Button variant="contained" sx={{ mt: 1 }} onClick={() => handleReplySubmit(post.id)}>
+                                                Reply
+                                            </Button>
+                                        </>
+                                    )}
                                 </CardContent>
                             </Card>
                         </Grid>
