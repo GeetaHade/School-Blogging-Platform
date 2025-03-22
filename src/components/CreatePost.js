@@ -43,6 +43,7 @@ function CreatePost() {
       description,
       category,
       imageUrl,
+      created_at: new Date().toISOString(),  // Add timestamp if needed
     };
 
     // Save the post to Elasticsearch
