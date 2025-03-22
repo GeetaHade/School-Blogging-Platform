@@ -58,47 +58,49 @@ app.get('/posts', async (req, res) => {
         res.status(500).send('Error fetching posts');
     }
 });
+
 app.post('/posts/:postId/reply', async (req, res) => {
   const { postId } = req.params;  // Get the post ID from the URL
   const { user, content } = req.body; // Get the reply data from the request body
-  
+
   try {
-    // Fetch the post from Elasticsearch
-    const result = await client.get({
-      index: 'posts',
-      id: postId,
-    });
+      // Fetch the post from Elasticsearch
+      const result = await client.get({
+          index: 'posts',
+          id: postId,
+      });
 
-    // Check if replies exists and is an array; if not, initialize it as an empty array
-    const replies = Array.isArray(result._source.replies) ? result._source.replies : [];
+      // Check if replies exists and is an array; if not, initialize it as an empty array
+      const replies = Array.isArray(result._source.replies) ? result._source.replies : [];
 
-    // Add the new reply to the replies array
-    const updatedPost = {
-      ...result._source,
-      replies: [
-        ...replies,
-        {
-          user,
-          content,
-          created_at: new Date().toISOString(),
-        },
-      ],
-    };
+      // Add the new reply to the replies array
+      const updatedPost = {
+          ...result._source,
+          replies: [
+              ...replies,
+              {
+                  user,
+                  content,
+                  created_at: new Date().toISOString(),
+              },
+          ],
+      };
 
-    // Update the post in Elasticsearch with the new reply
-    await client.index({
-      index: 'posts',
-      id: postId,
-      body: updatedPost,
-    });
+      // Update the post in Elasticsearch with the new reply using the 'update' method
+      await client.update({
+          index: 'posts',
+          id: postId,
+          body: {
+              doc: updatedPost,
+          },
+      });
 
-    res.status(200).json({ message: 'Reply added successfully' });
+      res.status(200).json({ message: 'Reply added successfully' });
   } catch (error) {
-    console.error('Error adding reply:', error);
-    res.status(500).send('Error adding reply');
+      console.error('Error adding reply:', error);
+      res.status(500).send('Error adding reply');
   }
 });
-
 
 
 app.listen(port, () => {

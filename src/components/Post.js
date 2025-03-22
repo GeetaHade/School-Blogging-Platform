@@ -26,37 +26,39 @@ function Posts() {
     }, []);
 
     const handleReplyChange = (postId, event) => {
-      setReplyInputs((prev) => ({
-          ...prev,
-          [postId]: event.target.value,
-      }));
-  };
-  
-  const handleReplySubmit = async (postId) => {
-    const content = replyInputs[postId];
-    if (!content.trim()) return;
-
-    try {
-        // Ensure the correct postId is being used
-        const response = await axios.post(`http://localhost:5001/posts/${postId}/reply`, { user: 'Anonymous', content });
-        console.log('Reply added:', response.data);
-
-        // Update the UI with the new reply
-        setPosts((prevPosts) => ({
-            ...prevPosts,
-            [postId]: {
-                ...prevPosts[postId],
-                replies: [...prevPosts[postId].replies, { user: 'Anonymous', content, timestamp: new Date() }],
-            },
+        setReplyInputs((prev) => ({
+            ...prev,
+            [postId]: event.target.value,
         }));
-        setReplyInputs({ ...replyInputs, [postId]: '' });
-    } catch (error) {
-        console.error('Error adding reply:', error);
-    }
-};
+    };
 
+    const handleReplySubmit = async (postId) => {
+        const content = replyInputs[postId];
+        if (!content.trim()) return;
 
+        try {
+            const response = await axios.post(`http://localhost:5001/posts/${postId}/reply`, { user: 'Anonymous', content });
+            console.log('Reply added:', response.data);
 
+            // Update the posts array with the new reply by modifying the specific post
+            setPosts((prevPosts) =>
+                prevPosts.map((post) =>
+                    post.id === postId
+                        ? {
+                              ...post,
+                              replies: [
+                                  ...post.replies,
+                                  { user: 'Anonymous', content, created_at: new Date().toISOString() },
+                              ],
+                          }
+                        : post
+                )
+            );
+            setReplyInputs({ ...replyInputs, [postId]: '' });
+        } catch (error) {
+            console.error('Error adding reply:', error);
+        }
+    };
 
     return (
         <Container sx={{ mt: 4 }}>
