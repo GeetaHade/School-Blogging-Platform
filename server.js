@@ -1,3 +1,4 @@
+// backend/server.js or index.js
 const express = require('express');
 const bodyParser = require('body-parser');
 const { Client } = require('@elastic/elasticsearch');
@@ -7,29 +8,49 @@ const jwt = require('jsonwebtoken');
 const app = express();
 const port = 5001;
 
-// Elasticsearch client setup
 const client = new Client({ node: 'http://localhost:9200' });
 
 app.use(cors());
 app.use(bodyParser.json());
 
-// Secret key for JWT (should be stored in an environment variable)
 const JWT_SECRET = 'your_secret_key';
 
-// Middleware to check if the user is authenticated
+// 🔒 Improved JWT Auth Middleware
 const authenticateJWT = (req, res, next) => {
-  const token = req.headers['authorization'];
+  const authHeader = req.headers['authorization'];
+  console.log('Auth header:', authHeader);
 
-  if (!token) return res.status(403).send('Access denied. No token provided.');
+  if (!authHeader) return res.status(403).send('No token provided');
 
+  const token = authHeader.split(' ')[1]; // Extract Bearer token
   jwt.verify(token, JWT_SECRET, (err, user) => {
-    if (err) return res.status(403).send('Access denied. Invalid token.');
+    if (err) {
+      console.error('JWT Error:', err);
+      return res.status(403).send('Invalid token');
+    }
     req.user = user;
     next();
   });
 };
 
-// Create a new post
+// 🔐 Dummy login endpoint (you can integrate real DB later)
+app.post('/login', (req, res) => {
+  const { email, password } = req.body;
+
+  // Replace this with DB lookup logic
+  if (email && password) {
+    const username = email.split('@')[0];
+    const role = 'Student';
+
+    const token = jwt.sign({ username, role }, JWT_SECRET, { expiresIn: '1h' });
+
+    return res.json({ token, username, role });
+  }
+
+  res.status(400).send('Invalid credentials');
+});
+
+// ✅ Create post
 app.post('/posts', async (req, res) => {
   const { title, description, category, imageUrl } = req.body;
 
@@ -42,7 +63,7 @@ app.post('/posts', async (req, res) => {
         category,
         imageUrl,
         created_at: new Date().toISOString(),
-        replies: [] // Initialize replies as an empty array
+        replies: [],
       },
     });
 
@@ -53,19 +74,19 @@ app.post('/posts', async (req, res) => {
   }
 });
 
-// Get all posts
+// ✅ Get all posts
 app.get('/posts', async (req, res) => {
   try {
     const result = await client.search({
       index: 'posts',
       body: {
         query: { match_all: {} },
-        size: 100, // Fetch up to 100 posts
+        size: 100,
       },
     });
 
     const posts = result.hits.hits.map(hit => ({
-      id: hit._id, // Ensure posts have unique IDs
+      id: hit._id,
       ...hit._source,
     }));
 
@@ -76,36 +97,28 @@ app.get('/posts', async (req, res) => {
   }
 });
 
-// Post a reply
+// ✅ Add reply
 app.post('/posts/:postId/reply', authenticateJWT, async (req, res) => {
-  const { postId } = req.params;  // Get the post ID from the URL
-  const { content } = req.body;   // Get the reply data from the request body
-  const user = req.user;          // Get the logged-in user from the request (added by the authenticateJWT middleware)
+  const { postId } = req.params;
+  const { content } = req.body;
+  const user = req.user;
 
   try {
-    // Fetch the post from Elasticsearch
-    const result = await client.get({
-      index: 'posts',
-      id: postId,
-    });
-
-    // Check if replies exists and is an array; if not, initialize it as an empty array
+    const result = await client.get({ index: 'posts', id: postId });
     const replies = Array.isArray(result._source.replies) ? result._source.replies : [];
 
-    // Add the new reply to the replies array
     const updatedPost = {
       ...result._source,
       replies: [
         ...replies,
         {
-          user: user.username, // Use the logged-in user's name
+          user: user.username,
           content,
           created_at: new Date().toISOString(),
         },
       ],
     };
 
-    // Update the post in Elasticsearch with the new reply
     await client.update({
       index: 'posts',
       id: postId,
