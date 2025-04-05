@@ -1,4 +1,3 @@
-// backend/server.js or index.js
 const express = require('express');
 const bodyParser = require('body-parser');
 const { Client } = require('@elastic/elasticsearch');
@@ -18,7 +17,7 @@ const JWT_SECRET = 'your_secret_key';
 // 🔒 Improved JWT Auth Middleware
 const authenticateJWT = (req, res, next) => {
   const authHeader = req.headers['authorization'];
-  console.log('Auth header:', authHeader);
+  //console.log('Auth header:', authHeader);
 
   if (!authHeader) return res.status(403).send('No token provided');
 
@@ -32,23 +31,6 @@ const authenticateJWT = (req, res, next) => {
     next();
   });
 };
-
-// 🔐 Dummy login endpoint (you can integrate real DB later)
-app.post('/login', (req, res) => {
-  const { email, password } = req.body;
-
-  // Replace this with DB lookup logic
-  if (email && password) {
-    const username = email.split('@')[0];
-    const role = 'Student';
-
-    const token = jwt.sign({ username, role }, JWT_SECRET, { expiresIn: '1h' });
-
-    return res.json({ token, username, role });
-  }
-
-  res.status(400).send('Invalid credentials');
-});
 
 // ✅ Create post
 app.post('/posts', async (req, res) => {
@@ -132,6 +114,19 @@ app.post('/posts/:postId/reply', authenticateJWT, async (req, res) => {
     console.error('Error adding reply:', error);
     res.status(500).send('Error adding reply');
   }
+});
+
+// ✅ Login route (for example, generating the JWT without expiry)
+app.post('/login', (req, res) => {
+  const { username, password, role } = req.body;
+
+  // Here, you would check the username, password, and role with your database or local data
+  // For example purposes, we assume validation is successful and proceed to generate a token
+  const user = { username, role }; // Simplified for demonstration
+
+  const token = jwt.sign(user, JWT_SECRET); // No expiry set, token is valid indefinitely
+
+  res.json({ token });
 });
 
 app.listen(port, () => {

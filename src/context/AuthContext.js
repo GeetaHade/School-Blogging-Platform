@@ -1,13 +1,21 @@
 // src/context/AuthContext.js
-import React, { createContext, useState, useContext } from 'react';
+import React, { createContext, useState, useContext, useEffect } from 'react';
+
 import axios from 'axios';
 
 const AuthContext = createContext();
 
-export const useAuth = () => useContext(AuthContext);
+export const useAuth = () => useContext(AuthContext); // ✅ Exported
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      setUser(JSON.parse(storedUser));
+    }
+  }, []);
 
   const login = async (email, password) => {
     try {
@@ -18,8 +26,10 @@ export const AuthProvider = ({ children }) => {
 
       const { token, username, role } = response.data;
 
+      const userData = { username, role };
       localStorage.setItem('authToken', token);
-      setUser({ username, role });
+      localStorage.setItem('user', JSON.stringify(userData));
+      setUser(userData);
     } catch (error) {
       console.error('Login failed', error);
     }
@@ -27,6 +37,7 @@ export const AuthProvider = ({ children }) => {
 
   const logout = () => {
     localStorage.removeItem('authToken');
+    localStorage.removeItem('user');
     setUser(null);
   };
 
