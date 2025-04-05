@@ -14,10 +14,9 @@ app.use(bodyParser.json());
 
 const JWT_SECRET = 'your_secret_key';
 
-// 🔒 Improved JWT Auth Middleware
 const authenticateJWT = (req, res, next) => {
   const authHeader = req.headers['authorization'];
-  //console.log('Auth header:', authHeader);
+  console.log('Authorization header:', authHeader); // Debugging statement
 
   if (!authHeader) return res.status(403).send('No token provided');
 
@@ -27,10 +26,12 @@ const authenticateJWT = (req, res, next) => {
       console.error('JWT Error:', err);
       return res.status(403).send('Invalid token');
     }
+    console.log('Authenticated user:', user); // Debugging statement
     req.user = user;
     next();
   });
 };
+
 
 // ✅ Create post
 app.post('/posts', async (req, res) => {
@@ -117,17 +118,19 @@ app.post('/posts/:postId/reply', authenticateJWT, async (req, res) => {
 });
 
 // ✅ Login route (for example, generating the JWT without expiry)
+// ✅ Login route (for example, generating the JWT without expiry)
 app.post('/login', (req, res) => {
   const { username, password, role } = req.body;
 
   // Here, you would check the username, password, and role with your database or local data
-  // For example purposes, we assume validation is successful and proceed to generate a token
   const user = { username, role }; // Simplified for demonstration
 
-  const token = jwt.sign(user, JWT_SECRET); // No expiry set, token is valid indefinitely
+  const token = jwt.sign(user, JWT_SECRET); // Set token expiry
 
   res.json({ token });
 });
+
+
 
 app.listen(port, () => {
   console.log(`Server running at http://localhost:${port}`);

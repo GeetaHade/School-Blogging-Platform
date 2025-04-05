@@ -1,43 +1,31 @@
-// src/context/AuthContext.js
 import React, { createContext, useState, useContext, useEffect } from 'react';
-
 import axios from 'axios';
 
 const AuthContext = createContext();
 
-export const useAuth = () => useContext(AuthContext); // ✅ Exported
+export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-
   useEffect(() => {
-    const storedUser = localStorage.getItem('user');
+    const storedUser = localStorage.getItem('authUser');
     if (storedUser) {
+      console.log('User loaded from localStorage:', storedUser); // Debugging statement
       setUser(JSON.parse(storedUser));
     }
   }, []);
-
-  const login = async (email, password) => {
-    try {
-      const response = await axios.post('http://localhost:5001/login', {
-        email,
-        password,
-      });
-
-      const { token, username, role } = response.data;
-
-      const userData = { username, role };
-      localStorage.setItem('authToken', token);
-      localStorage.setItem('user', JSON.stringify(userData));
-      setUser(userData);
-    } catch (error) {
-      console.error('Login failed', error);
-    }
+  
+  const login = (username, role) => {
+    const user = { username, role };
+    setUser(user);
+    localStorage.setItem('authUser', JSON.stringify(user));
+    console.log('User logged in:', user); // Debugging statement
   };
+  
 
   const logout = () => {
     localStorage.removeItem('authToken');
-    localStorage.removeItem('user');
+    localStorage.removeItem('authUser');
     setUser(null);
   };
 

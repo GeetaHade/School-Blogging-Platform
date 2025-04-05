@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import axios from 'axios'; // Make sure axios is imported
 import {
   Avatar,
   Button,
@@ -34,18 +35,42 @@ function Login() {
     }
   }, [user]);
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
 
     const existingUsers = JSON.parse(localStorage.getItem('users')) || [];
 
+    // Find the user based on the username, password, and role
     const user = existingUsers.find(
       (u) => u.username === username && u.password === password && u.role === role
     );
 
     if (user) {
-      login(user.username, user.role);
-      navigate('/');
+      try {
+        // Send login request to the backend to get the token
+        const response = await axios.post('http://localhost:5001/login', {
+          username,
+          password,
+          role,
+        });
+
+        // Check if token is returned
+        if (response.data.token) {
+          // Store token in localStorage
+          localStorage.setItem('authToken', response.data.token);
+
+          // Log the user in (context)
+          login(user.username, user.role);
+
+          // Navigate to the home page (or any other page)
+          navigate('/');
+        } else {
+          alert('Token not received');
+        }
+      } catch (error) {
+        console.error('Login error:', error);
+        alert('Error during login');
+      }
     } else {
       alert('Invalid username, password, or role');
     }

@@ -1,4 +1,3 @@
-// src/components/Post.js
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import {
@@ -38,13 +37,17 @@ function Posts() {
   const handleReplySubmit = async (postId) => {
     const content = replyInputs[postId];
     if (!content.trim()) return;
-
+  
+    // Debugging the token retrieval
     const token = localStorage.getItem('authToken');
+    console.log('Token from localStorage:', token);
+  
     if (!token) {
       alert('You must be logged in to reply.');
+      console.log('No token found, user is not logged in');
       return;
     }
-
+  
     try {
       const response = await axios.post(
         `http://localhost:5001/posts/${postId}/reply`,
@@ -55,28 +58,31 @@ function Posts() {
           },
         }
       );
-
-      console.log('Reply added:', response.data);
-
-      setPosts(prevPosts =>
-        prevPosts.map(post =>
-          post.id === postId
-            ? {
-                ...post,
-                replies: [
-                  ...post.replies,
-                  { user: user.username, content, created_at: new Date().toISOString() },
-                ],
-              }
-            : post
-        )
-      );
-      setReplyInputs({ ...replyInputs, [postId]: '' });
+  
+      if (response.status === 200) {
+        console.log('Reply added:', response.data);
+        setPosts(prevPosts =>
+          prevPosts.map(post =>
+            post.id === postId
+              ? {
+                  ...post,
+                  replies: [
+                    ...post.replies,
+                    { user: user.username, content, created_at: new Date().toISOString() },
+                  ],
+                }
+              : post
+          )
+        );
+        setReplyInputs({ ...replyInputs, [postId]: '' });
+      } else {
+        console.error('Failed to add reply:', response);
+      }
     } catch (error) {
       console.error('Error adding reply:', error);
     }
   };
-
+  
   return (
     <Container sx={{ mt: 4 }}>
       <Grid container spacing={3}>
