@@ -10,7 +10,7 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const storedUser = localStorage.getItem('authUser');
     if (storedUser) {
-      console.log('User loaded from localStorage:', storedUser); // Debugging statement
+      //console.log('User loaded from localStorage:', storedUser); // Debugging statement
       setUser(JSON.parse(storedUser));
     }
   }, []);
@@ -19,7 +19,7 @@ export const AuthProvider = ({ children }) => {
     const user = { username, role };
     setUser(user);
     localStorage.setItem('authUser', JSON.stringify(user));
-    console.log('User logged in:', user); // Debugging statement
+    //console.log('User logged in:', user); // Debugging statement
   };
   
 

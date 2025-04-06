@@ -14,24 +14,24 @@ app.use(bodyParser.json());
 
 const JWT_SECRET = 'your_secret_key';
 
+// ✅ JWT middleware
 const authenticateJWT = (req, res, next) => {
   const authHeader = req.headers['authorization'];
-  console.log('Authorization header:', authHeader); // Debugging statement
+  //console.log('Authorization header:', authHeader);
 
   if (!authHeader) return res.status(403).send('No token provided');
 
-  const token = authHeader.split(' ')[1]; // Extract Bearer token
+  const token = authHeader.split(' ')[1];
   jwt.verify(token, JWT_SECRET, (err, user) => {
     if (err) {
       console.error('JWT Error:', err);
       return res.status(403).send('Invalid token');
     }
-    console.log('Authenticated user:', user); // Debugging statement
+    //console.log('Authenticated user:', user);
     req.user = user;
     next();
   });
 };
-
 
 // ✅ Create post
 app.post('/posts', async (req, res) => {
@@ -117,20 +117,37 @@ app.post('/posts/:postId/reply', authenticateJWT, async (req, res) => {
   }
 });
 
-// ✅ Login route (for example, generating the JWT without expiry)
-// ✅ Login route (for example, generating the JWT without expiry)
-app.post('/login', (req, res) => {
-  const { username, password, role } = req.body;
+app.delete('/posts/:id', async (req, res) => {
+  const postId = req.params.id;
+  //console.log("Received delete request for post ID:", postId); // 🔍 Log the ID
 
-  // Here, you would check the username, password, and role with your database or local data
-  const user = { username, role }; // Simplified for demonstration
+  try {
+    const result = await client.delete({
+      index: 'posts',
+      id: postId,
+    });
 
-  const token = jwt.sign(user, JWT_SECRET); // Set token expiry
+    //console.log("Elasticsearch delete response:", result); // ✅ See what Elasticsearch says
 
-  res.json({ token });
+    res.status(200).json({ message: 'Post deleted successfully' });
+  } catch (error) {
+    //console.error("Error deleting post:", error.meta?.body?.error || error.message); // ❌ Debug any error
+    res.status(404).json({ message: 'Post not found or already deleted' });
+  }
 });
 
 
+// ✅ Login route
+app.post('/login', (req, res) => {
+  const { username, password, role } = req.body;
+
+  // Simplified for demonstration
+  const user = { username, role };
+
+  const token = jwt.sign(user, JWT_SECRET);
+
+  res.json({ token });
+});
 
 app.listen(port, () => {
   console.log(`Server running at http://localhost:${port}`);
