@@ -63,6 +63,16 @@ function Header(props) {
             >
               Create Post
             </Button>
+
+            <Button
+              onClick={() => navigate('/chatbot')}
+              variant="outlined"
+              color="primary"
+              sx={{ textTransform: 'none' }}
+            >
+              AI Assistant
+            </Button>
+
           </Stack>
         ) : (
           <Button

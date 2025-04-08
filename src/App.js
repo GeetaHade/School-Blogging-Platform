@@ -5,6 +5,7 @@ import Login from './components/Login';
 import Signup from './components/Signup';
 import CreatePost from './components/CreatePost';
 import Posts from './components/Post';
+import Chatbot from './components/Chatbot';
 import React from 'react';
 
 import './App.css';
@@ -39,6 +40,9 @@ function App() {
           {/* Login and Signup Pages */}
           <Route path="/signup" element={<Signup />} />
           <Route path="/login" element={<Login />} />
+
+          {/* chatbot page */}
+          <Route path="/chatbot" element={<Chatbot />} />
         </Routes>
       </Router>
     </AuthProvider>

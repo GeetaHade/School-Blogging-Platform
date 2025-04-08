@@ -152,7 +152,7 @@ app.post('/login', (req, res) => {
   res.json({ token });
 });
 
-// OpenAI reply route
+// OpenAI post reply route
 app.post('/generate-reply', async (req, res) => {
   const { prompt } = req.body;
 
@@ -166,7 +166,7 @@ app.post('/generate-reply', async (req, res) => {
       },
       {
         headers: {
-          Authorization: `Bearer your-api-key`, // replace this
+          Authorization: `Bearer YOUR-API-KEY`, // replace this
           'Content-Type': 'application/json',
         },
       }
@@ -179,6 +179,64 @@ app.post('/generate-reply', async (req, res) => {
     res.status(500).send('Failed to generate AI reply');
   }
 });
+
+// Chatbot assistant route
+app.post('/chatbot/recommend', async (req, res) => {
+  const { latitude, longitude, message } = req.body;
+
+  try {
+    // Step 1: Get weather data
+    const weatherResponse = await axios.get('https://api.openweathermap.org/data/2.5/weather', {
+      params: {
+        lat: latitude,
+        lon: longitude,
+        units: 'metric',
+        appid: 'YOUR-WEATHER-API-KEY'
+      }
+    });
+
+    const weather = weatherResponse.data.weather[0].description;
+    const temp = weatherResponse.data.main.temp;
+    const city = weatherResponse.data.name;
+
+    // Step 2: Get local events
+    const serpResponse = await axios.get('https://serpapi.com/search.json', {
+      params: {
+        q: 'live sports or events near me',
+        location: city,
+        api_key: 'YOUR-SERP-API-KEY'
+      }
+    });
+
+    const events = serpResponse.data?.organic_results?.slice(0, 3).map((e, i) => `${i + 1}. ${e.title}`).join('\n') || 'No recent events found.';
+
+    // Step 3: Send final prompt to OpenAI
+    const fullPrompt = `User asked: "${message}".\nWeather in ${city}: ${weather}, ${temp}°C.\nCurrent local events:\n${events}\n\nRespond in a helpful and friendly way.`;
+
+    const aiResponse = await axios.post(
+      'https://api.openai.com/v1/chat/completions',
+      {
+        model: 'gpt-3.5-turbo',
+        messages: [{ role: 'user', content: fullPrompt }],
+        max_tokens: 150,
+      },
+      {
+        headers: {
+          Authorization: `Bearer YOUR-OPEN-AI-API-KEY`,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    const reply = aiResponse.data.choices[0].message.content.trim();
+    res.json({ reply });
+  } catch (error) {
+    console.error('Error in /chatbot/recommend:', error.message);
+    res.status(500).json({ error: 'Failed to generate recommendation.' });
+  }
+});
+
+
 
 
 app.listen(port, () => {
