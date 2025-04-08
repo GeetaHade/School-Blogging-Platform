@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import {
-  Card, CardContent, Typography, CardMedia, Grid, Container, TextField, Button
+  Card, CardContent, Typography, CardMedia, Grid, Container, TextField, Button, Switch, FormControlLabel,
 } from '@mui/material';
 import { useAuth } from '../context/AuthContext';
 
@@ -9,6 +9,10 @@ function Posts() {
   const { user } = useAuth();
   const [posts, setPosts] = useState([]);
   const [replyInputs, setReplyInputs] = useState({});
+
+  const [useAIReply, setUseAIReply] = useState({});
+  const [loadingAI, setLoadingAI] = useState({});
+
 
   useEffect(() => {
     const fetchPosts = async () => {
@@ -109,6 +113,33 @@ function Posts() {
       //console.error('Error deleting post:', error); // Detailed error log
     }
   };
+
+  const handleToggleAI = (postId) => {
+    setUseAIReply((prev) => ({
+      ...prev,
+      [postId]: !prev[postId],
+    }));
+  };
+
+  const handleGenerateAIReply = async (postId, promptContent) => {
+    setLoadingAI((prev) => ({ ...prev, [postId]: true }));
+    try {
+      const response = await axios.post('http://localhost:5001/generate-reply', {
+        prompt: `Reply to the following post:\n\n${promptContent}`,
+      });
+  
+      setReplyInputs((prev) => ({
+        ...prev,
+        [postId]: response.data.reply,
+      }));
+    } catch (error) {
+      console.error('AI generation error:', error);
+      alert('Failed to generate AI reply.');
+    } finally {
+      setLoadingAI((prev) => ({ ...prev, [postId]: false }));
+    }
+  };
+  
   
   return (
     <Container sx={{ mt: 4 }}>
@@ -144,6 +175,30 @@ function Posts() {
                         value={replyInputs[post.id] || ''}
                         onChange={(e) => handleReplyChange(post.id, e)}
                       />
+
+                      <FormControlLabel
+                        control={
+                          <Switch
+                            checked={useAIReply[post.id] || false}
+                            onChange={() => handleToggleAI(post.id)}
+                            color="primary"
+                          />
+                        }
+                        label="Use AI Reply"
+                      />
+                      
+                      {useAIReply[post.id] && (
+                        <Button
+                          variant="outlined"
+                          sx={{ mt: 1 }}
+                          onClick={() => handleGenerateAIReply(post.id, post.description)}
+                          disabled={loadingAI[post.id]}
+                        >
+                          {loadingAI[post.id] ? 'Generating...' : 'Generate with AI'}
+                        </Button>
+                      )}
+
+
                       <Button variant="contained" sx={{ mt: 1 }} onClick={() => handleReplySubmit(post.id)}>
                         Reply
                       </Button>

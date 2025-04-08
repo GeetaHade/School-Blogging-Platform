@@ -12,6 +12,9 @@ const client = new Client({ node: 'http://localhost:9200' });
 app.use(cors());
 app.use(bodyParser.json());
 
+const axios = require('axios');
+
+
 const JWT_SECRET = 'your_secret_key';
 
 // ✅ JWT middleware
@@ -148,6 +151,35 @@ app.post('/login', (req, res) => {
 
   res.json({ token });
 });
+
+// OpenAI reply route
+app.post('/generate-reply', async (req, res) => {
+  const { prompt } = req.body;
+
+  try {
+    const response = await axios.post(
+      'https://api.openai.com/v1/chat/completions',
+      {
+        model: 'gpt-3.5-turbo',
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: 100,
+      },
+      {
+        headers: {
+          Authorization: `Bearer your-api-key`, // replace this
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    const aiReply = response.data.choices[0].message.content.trim();
+    res.json({ reply: aiReply });
+  } catch (error) {
+    console.error('OpenAI API error:', error.message);
+    res.status(500).send('Failed to generate AI reply');
+  }
+});
+
 
 app.listen(port, () => {
   console.log(`Server running at http://localhost:${port}`);
