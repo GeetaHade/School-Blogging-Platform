@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import PropTypes from 'prop-types';
 import { useNavigate } from 'react-router-dom';
 import Toolbar from '@mui/material/Toolbar';
@@ -7,15 +7,49 @@ import Typography from '@mui/material/Typography';
 import { Link as RouterLink } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Stack from '@mui/material/Stack';
+import Menu from '@mui/material/Menu';
+import MenuItem from '@mui/material/MenuItem';
+import IconButton from '@mui/material/IconButton';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
+import Select from '@mui/material/Select';
+import Box from '@mui/material/Box';
 
 function Header(props) {
   const { sections, title } = props;
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const [anchorEl, setAnchorEl] = useState(null);
+  const [manageMode, setManageMode] = useState(false);
+  const [selectedUser, setSelectedUser] = useState('');
+
+  const open = Boolean(anchorEl);
+  const userList = JSON.parse(localStorage.getItem('users')) || [];
 
   const handleLogout = () => {
     logout();
     navigate('/login');
+  };
+
+  const handleMenuOpen = (e) => {
+    setAnchorEl(e.currentTarget);
+  };
+
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+  };
+
+  const handleManageAccounts = () => {
+    setManageMode(!manageMode);
+  };
+
+  const handleDisableToggle = () => {
+    const users = userList.map((u) =>
+      u.username === selectedUser ? { ...u, disabled: !u.disabled } : u
+    );
+    localStorage.setItem('users', JSON.stringify(users));
+    alert(`Account ${selectedUser} has been ${users.find(u => u.username === selectedUser).disabled ? 'disabled' : 'enabled'}.`);
+    setSelectedUser('');
+    setManageMode(false);
   };
 
   return (
@@ -33,7 +67,6 @@ function Header(props) {
         <Typography
           component="h1"
           variant="h5"
-          color="inherit"
           noWrap
           sx={{ flex: 1, fontWeight: 'bold', color: '#333' }}
         >
@@ -45,34 +78,38 @@ function Header(props) {
             <Typography variant="subtitle1" color="text.secondary">
               {user.username} ({user.role})
             </Typography>
-            <Button
-              onClick={handleLogout}
-              variant="outlined"
-              color="secondary"
-              sx={{ textTransform: 'none' }}
-            >
-              Logout
-            </Button>
 
-            {/* Create Post Button (Visible after login) */}
-            <Button
-              onClick={() => navigate('/create-post')}
-              variant="contained"
+            <IconButton
+              onClick={handleMenuOpen}
               color="primary"
-              sx={{ textTransform: 'none' }}
+              size="small"
+              sx={{ ml: 1 }}
             >
-              Create Post
-            </Button>
+              <MoreVertIcon />
+            </IconButton>
 
-            <Button
-              onClick={() => navigate('/chatbot')}
-              variant="outlined"
-              color="primary"
-              sx={{ textTransform: 'none' }}
+            <Menu
+              anchorEl={anchorEl}
+              open={open}
+              onClose={handleMenuClose}
+              anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+              transformOrigin={{ vertical: 'top', horizontal: 'right' }}
             >
-              AI Assistant
-            </Button>
-
+              <MenuItem onClick={() => { navigate('/create-post'); handleMenuClose(); }}>
+                Create Post
+              </MenuItem>
+              <MenuItem onClick={() => { navigate('/chatbot'); handleMenuClose(); }}>
+                AI Assistant
+              </MenuItem>
+              {user.role === 'Administrator' && (
+                <MenuItem onClick={() => { handleManageAccounts(); handleMenuClose(); }}>
+                  Manage Accounts
+                </MenuItem>
+              )}
+              <MenuItem onClick={handleLogout}>
+                Logout
+              </MenuItem>
+            </Menu>
           </Stack>
         ) : (
           <Button
@@ -85,6 +122,38 @@ function Header(props) {
           </Button>
         )}
       </Toolbar>
+
+      {/* Dropdown to manage users (only visible when toggled) */}
+      {user?.role === 'Administrator' && manageMode && (
+        <Box display="flex" justifyContent="center" alignItems="center" sx={{ mt: 1 }}>
+          <Select
+            size="small"
+            value={selectedUser}
+            onChange={(e) => setSelectedUser(e.target.value)}
+            displayEmpty
+            sx={{ minWidth: 240, mx: 2 }}
+          >
+            <MenuItem value="" disabled>
+              Select user to manage
+            </MenuItem>
+            {userList.map((u) => (
+              <MenuItem key={u.username} value={u.username}>
+                {u.username} ({u.role}) [{u.disabled ? 'Disabled' : 'Active'}]
+              </MenuItem>
+            ))}
+          </Select>
+          {selectedUser && (
+            <Button
+              variant="contained"
+              color="warning"
+              onClick={handleDisableToggle}
+              sx={{ textTransform: 'none' }}
+            >
+              Toggle Status
+            </Button>
+          )}
+        </Box>
+      )}
 
       {/* Navigation Links */}
       <Toolbar

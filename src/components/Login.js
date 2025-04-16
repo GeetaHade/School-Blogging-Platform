@@ -34,35 +34,36 @@ function Login() {
       setRole(roles[0]);
     }
   }, [user]);
-
+  
   const handleLogin = async (e) => {
     e.preventDefault();
-
+  
     const existingUsers = JSON.parse(localStorage.getItem('users')) || [];
-
+  
     // Find the user based on the username, password, and role
     const user = existingUsers.find(
-      (u) => u.username === username && u.password === password && u.role === role
+      (u) =>
+        u.username === username &&
+        u.password === password &&
+        u.role === role
     );
-
+  
     if (user) {
+      if (user.disabled) {
+        alert('This account has been disabled by the administrator.');
+        return;
+      }
+  
       try {
-        // Send login request to the backend to get the token
         const response = await axios.post('http://localhost:5001/login', {
           username,
           password,
           role,
         });
-
-        // Check if token is returned
+  
         if (response.data.token) {
-          // Store token in localStorage
           localStorage.setItem('authToken', response.data.token);
-
-          // Log the user in (context)
           login(user.username, user.role);
-
-          // Navigate to the home page (or any other page)
           navigate('/');
         } else {
           alert('Token not received');
@@ -75,7 +76,7 @@ function Login() {
       alert('Invalid username, password, or role');
     }
   };
-
+  
   const handleLogout = () => {
     logout(); // ✅ Clear context and localStorage
     setUsername('');

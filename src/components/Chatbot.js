@@ -60,7 +60,7 @@ function Chatbot() {
       <Container maxWidth="sm">
         <Paper elevation={6} sx={{ p: 4, borderRadius: 3, backgroundColor: '#ffffffcc' }}>
           <Typography variant="h4" align="center" fontWeight="bold" color="primary" gutterBottom>
-            AI Chat Assistant 🤖
+            AI Chat Assistant 
           </Typography>
 
           <Box
