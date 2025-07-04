@@ -166,7 +166,7 @@ app.post('/generate-reply', async (req, res) => {
       },
       {
         headers: {
-          Authorization: `Bearer YOUR-API-KEY`, // replace this
+          Authorization: `Bearer open_ai_key`, // replace this
           'Content-Type': 'application/json',
         },
       }
@@ -191,7 +191,7 @@ app.post('/chatbot/recommend', async (req, res) => {
         lat: latitude,
         lon: longitude,
         units: 'metric',
-        appid: 'YOUR-WEATHER-API-KEY'
+        appid: 'weather_api_key' // replace with your OpenWeatherMap API key
       }
     });
 
@@ -204,7 +204,7 @@ app.post('/chatbot/recommend', async (req, res) => {
       params: {
         q: 'live sports or events near me',
         location: city,
-        api_key: 'YOUR-SERP-API-KEY'
+        api_key: 'serp_api_key'
       }
     });
 
@@ -222,7 +222,7 @@ app.post('/chatbot/recommend', async (req, res) => {
       },
       {
         headers: {
-          Authorization: `Bearer YOUR-OPEN-AI-API-KEY`,
+          Authorization: `Bearer open_ai_key`,
           'Content-Type': 'application/json',
         },
       }
@@ -235,6 +235,112 @@ app.post('/chatbot/recommend', async (req, res) => {
     res.status(500).json({ error: 'Failed to generate recommendation.' });
   }
 });
+const formatPlaces = (places, type) => {
+  return places.slice(0, 3).map((item) => ({
+    name: item.title,
+    type: type,
+    details: {
+      address: item.address || "Not Provided",
+      latitude: item.gps_coordinates?.latitude || (41.8781 + Math.random() * 0.02),
+      longitude: item.gps_coordinates?.longitude || (-87.6298 + Math.random() * 0.02),
+      hours: item.hours || []
+    }
+  }));
+};
+
+app.post('/recommendations', async (req, res) => {
+  const { latitude, longitude } = req.body;
+
+  try {
+    // Weather API
+    const weatherRes = await axios.get('https://api.openweathermap.org/data/2.5/weather', {
+      params: { lat: latitude, lon: longitude, units: 'metric', appid: 'weather_api_key' }
+    });
+
+    const city = weatherRes.data.name;
+    const weather = weatherRes.data.weather[0].description;
+    const temp = weatherRes.data.main.temp;
+
+    // Fetch events
+    const search = async (query) => {
+      try {
+        const serp = await axios.get('https://serpapi.com/search.json', {
+          params: { q: query, location: city, api_key: 'weather_api_key' }
+        });
+        let results = [];
+        if (Array.isArray(serp.data.local_results?.places)) {
+          results = serp.data.local_results.places;
+        } else if (Array.isArray(serp.data.local_results)) {
+          results = serp.data.local_results;
+        } else if (Array.isArray(serp.data.organic_results)) {
+          results = serp.data.organic_results;
+        }
+        return results;
+      } catch (err) {
+        console.error(`SerpAPI error:`, err.message);
+        return [];
+      }
+    };
+
+    const [rawRestaurants, rawConcerts, rawSports] = await Promise.all([
+      search('restaurants near me'),
+      search('live concerts near me'),
+      search('live sports events near me')
+    ]);
+
+    const restaurants = formatPlaces(rawRestaurants, 'restaurant');
+    const concerts = formatPlaces(rawConcerts, 'music');
+    const sports = formatPlaces(rawSports, 'sports');
+
+    // OpenAI summarization prompt
+    const formatItems = (list) => list.map((item, i) => `${i + 1}. ${item.name} (${item.details.address})`).join('\n');
+
+    const prompt = `
+Generate recommendations based on:
+City: ${city}
+Weather: ${weather}, ${temp}°C
+
+Top 3 Restaurants:
+${formatItems(restaurants)}
+
+Top 3 Musical Events:
+${formatItems(concerts)}
+
+Top 3 Sports Events:
+${formatItems(sports)}
+
+Write a fun and personalized activity suggestion summary for today.
+`;
+
+    const openaiRes = await axios.post('https://api.openai.com/v1/chat/completions', {
+      model: 'gpt-3.5-turbo',
+      messages: [{ role: 'user', content: prompt }],
+      max_tokens: 300,
+    }, {
+      headers: {
+        Authorization: `Bearer open_ai_key`,
+        'Content-Type': 'application/json',
+      }
+    });
+
+    const summary = openaiRes.data.choices[0].message.content.trim();
+
+    res.json({
+      city,
+      weather,
+      temperature: temp,
+      restaurants,
+      concerts,
+      sports,
+      summary
+    });
+
+  } catch (err) {
+    console.error('Recommendation error:', err.message);
+    res.status(500).json({ error: 'Failed to get recommendations' });
+  }
+});
+
 
 
 

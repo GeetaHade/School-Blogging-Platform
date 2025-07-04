@@ -13,6 +13,8 @@ import IconButton from '@mui/material/IconButton';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import Select from '@mui/material/Select';
 import Box from '@mui/material/Box';
+import RecommendationPopup from './RecommendationPopup';
+
 
 function Header(props) {
   const { sections, title } = props;
@@ -21,6 +23,8 @@ function Header(props) {
   const [anchorEl, setAnchorEl] = useState(null);
   const [manageMode, setManageMode] = useState(false);
   const [selectedUser, setSelectedUser] = useState('');
+  const [recPopupOpen, setRecPopupOpen] = useState(false);
+
 
   const open = Boolean(anchorEl);
   const userList = JSON.parse(localStorage.getItem('users')) || [];
@@ -101,6 +105,11 @@ function Header(props) {
               <MenuItem onClick={() => { navigate('/chatbot'); handleMenuClose(); }}>
                 AI Assistant
               </MenuItem>
+              <MenuItem onClick={() => { setRecPopupOpen(true); handleMenuClose(); }}>
+  Recommended For You
+</MenuItem>
+
+
               {user.role === 'Administrator' && (
                 <MenuItem onClick={() => { handleManageAccounts(); handleMenuClose(); }}>
                   Manage Accounts
@@ -122,6 +131,8 @@ function Header(props) {
           </Button>
         )}
       </Toolbar>
+      <RecommendationPopup open={recPopupOpen} onClose={() => setRecPopupOpen(false)} />
+
 
       {/* Dropdown to manage users (only visible when toggled) */}
       {user?.role === 'Administrator' && manageMode && (
